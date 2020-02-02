@@ -12,6 +12,8 @@ from urllib.parse import urlencode, \
 from time import sleep
 from pprint import pprint
 
+from storage import Storage
+
 config = configparser.ConfigParser()
 config.read('example.ini')
 
@@ -132,6 +134,8 @@ class SpotifyAPI(object):
     
     
 if __name__ == "__main__":
+    s = Storage()
+
     oauth2 = OAuth2(dict(config['DEFAULT']))
     
     print(dict(config['DEFAULT']))
@@ -139,25 +143,32 @@ if __name__ == "__main__":
     api = SpotifyAPI(oauth2)
 
     try:
+        last_track_id = s.get_last_track_id()
+    except IndexError:
+        last_track_id = ''
+
+    try:
+        # read last stored song
+
         while True:
             play = api.currently_playing()
-            print(play)
             
             if play != {}:
-               title_id = play['item']['id']
-               title = play['item']['name']
+                track_id = play['item']['id']
+                title = play['item']['name']
+                album = play['item']['album']['name']
+                album_url = max(play['item']['album']['images'], key=lambda img:img['width'])['url']
+                artists = ",".join([artist['name'] for artist in play['item']['artists']])
 
-               album = play['item']['album']['name']
-               artists = play['item']['artists']
-            
-               print(title_id)
-               print(title)
-
-               for artist in artists:
-                   print(artist['name'], end=", ")
+                
+                #for artist in artists:
+                #    print(artist['name'], end=", ")
                     
-               print(album)
-            
+                if last_track_id != track_id:
+                    print("Inserted {}, {}, {}, {}, {}".format(track_id, title, artists, album, album_url))
+                    s.insert(track_id, title, artists, album, album_url)
+                    last_track_id = track_id
+
             sleep(5)
 
     except KeyboardInterrupt:
