@@ -1,24 +1,11 @@
-#!/usr/bin/env python3
-
 import requests
 import json
 import base64
-import configparser
-
-from threading import Thread, Event
 
 from urllib.parse import urlencode, \
                         urlparse, \
                         parse_qs,\
                         quote_plus
-from time import sleep
-from pprint import pprint
-
-from storage import Storage
-
-config = configparser.ConfigParser()
-config.read('example.ini')
-
 
 class OAuth2(object):
     def __init__(self, api_state):
@@ -134,64 +121,3 @@ class SpotifyAPI(object):
         else:
             raise RuntimeError
 
-def do_poll(stop_event, s, oauth2):
-    try:
-        last_track_id = s.get_last_track_id()
-    except IndexError:
-        last_track_id = ''
-    
-    api = SpotifyAPI(oauth2)
-
-    while not stop_event.is_set():
-        try:
-            play = api.currently_playing()
-        except requests.exceptions.ConnectionError as e:
-            # TODO do error handling properly
-            print(e)
-            play = {}
-        
-        if play != {}:
-            track_id = play['item']['id']
-            title = play['item']['name']
-            album = play['item']['album']['name']
-            album_url = max(play['item']['album']['images'], key=lambda img:img['width'])['url']
-            artists = ",".join([artist['name'] for artist in play['item']['artists']])
-
-            
-            #for artist in artists:
-            #    print(artist['name'], end=", ")
-                
-            if last_track_id != track_id:
-                print("Inserted {}, {}, {}, {}, {}".format(track_id, title, artists, album, album_url))
-                s.insert(track_id, title, artists, album, album_url)
-                last_track_id = track_id
-        
-
-
-        stop_event.wait(5)
-
-    
-if __name__ == "__main__":
-    s = Storage()
-    oauth2 = OAuth2(dict(config['DEFAULT']))
-    
-    try:
-        stop_event = Event()
-
-        t = Thread(target=do_poll, args=(stop_event, s, oauth2))
-        t.start()
-
-        # simulate flask event loop
-        while True:
-            sleep(1)
-
-    except KeyboardInterrupt:
-        stop_event.set()
-        t.join()
-
-        # save current tokens
-        state = oauth2.get_state()
-        config['DEFAULT'] = state
-        with open('example.ini', 'w') as configfile:
-            config.write(configfile)
-        
