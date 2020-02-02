@@ -151,7 +151,13 @@ if __name__ == "__main__":
         # read last stored song
 
         while True:
-            play = api.currently_playing()
+            try:
+                play = api.currently_playing()
+            except requests.exceptions.ConnectionError as e:
+                # TODO do error handling properly
+                print(e)
+                sleep(5)
+                continue
             
             if play != {}:
                 track_id = play['item']['id']
