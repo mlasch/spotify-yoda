@@ -5,8 +5,10 @@ import json
 import base64
 import configparser
 
-from urllib.parse import urlencode
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlencode, \
+                        urlparse, \
+                        parse_qs,\
+                        quote_plus
 from time import sleep
 from pprint import pprint
 
@@ -49,7 +51,7 @@ class OAuth2(object):
 
         return True
 
-    def init_token(self, code, state):
+    def request_token(self, code, state):
         print(code)
         print(state)
         payload = {'grant_type': 'authorization_code',
@@ -77,15 +79,25 @@ class OAuth2(object):
             self.api_state['access_token'] = new_tokens['access_token']
             self.api_state['refresh_token'] = new_tokens['refresh_token']
     
-    def request_token(self):
-        print("No API token available, go to:")
-        print("https://accounts.spotify.com/login?continue=https%3A%2F%2Faccounts.spotify.com%2Fauthorize%3Fscope%3Duser-read-currently-playing%26response_type%3Dcode%26redirect_uri%3Dhttps%253A%252F%252Flocalhost%252Fapi%26state%3Dbla%26client_id%3D{}".format(self.api_state['client_id']))
-        print("Paste the redirected url here:")
-        code_url = input() 
+    def authorize(self, redirect_uri="https://localhost/api"):
+        scope = "user-read-currently-playing"
+        state = "some_state"
+        client_id = self.api_state['client_id']
+        cont = "https://accounts.spotify.com/authorize?" + \
+            "response_type=code&" + \
+            "scope={}&".format(scope) + \
+            "redirect_uri={}&".format(quote_plus(redirect_uri)) + \
+            "state={}&".format(state) + \
+            "client_id={}".format(client_id)
+        
+        url = "https://accounts.spotify.com/login?continue={}".format(quote_plus(cont))
+        print("No API token available or expired, go to:")
+        print(url)
+        code_url = input('Paste the redirected url here > ') 
         url_parsed = urlparse(code_url)
         query = parse_qs(url_parsed.query)
     
-        return self.init_token(query['code'][0], query['state'][0])
+        return self.request_token(query['code'][0], query['state'][0])
 
     def get_token(self):
         return self.api_state['access_token']
@@ -107,7 +119,7 @@ class SpotifyAPI(object):
             if self.auth.refresh_token():
                 return self.currently_playing()
             else:
-                self.auth.request_token()
+                self.auth.authorize()
                 return self.currently_playing()
         
         elif r.status_code == 200:
