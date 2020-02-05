@@ -28,13 +28,15 @@ class Storage(object):
         Tracks.create(track_id=track_id, title=title, artist=artist, album=album, album_url=album_url)
 
     def get_tracks(self, start, end):
+        offset = start - 1
+        limit = end - offset
         return [
                 {   'track_id': track.track_id, 
                     'title': track.title,
                     'artist': track.artist,
                     'album': track.album,
                     'album_url': track.album_url
-                } for track in Tracks.select().order_by(Tracks.id.desc()).limit(end).offset(start-1)]
+                } for track in Tracks.select().order_by(Tracks.id.desc()).limit(limit).offset(offset)]
 
 if __name__ == '__main__':
     db.connect()
