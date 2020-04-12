@@ -12,11 +12,10 @@ from flask import Flask
 from flask import jsonify
 
 from storage import Storage
-from poll import OAuth2, SpotifyAPI
+from oauth import OAuth2, ConfigPersist
+from poll import SpotifyAPI
 
-config = configparser.ConfigParser()
-config.read('example.ini')
-
+CONFIG_FILE = 'default.ini'
 
 def do_poll(stop_event, s, oauth2):
     try:
@@ -80,28 +79,30 @@ def start_server(s):
 
 if __name__ == "__main__":
     s = Storage()
-    oauth2 = OAuth2(dict(config['DEFAULT']))
+
+    config_persist = ConfigPersist(CONFIG_FILE)
+    oauth2 = OAuth2(config_persist)
     
-    try:
-        stop_event = Event()
+    # try:
+    stop_event = Event()
 
-        t = Thread(target=do_poll, args=(stop_event, s, oauth2))
-        t.start()
+    t = Thread(target=do_poll, args=(stop_event, s, oauth2))
+    t.start()
 
-        start_server(s)
-        stop_event.set()
+    start_server(s)
+    stop_event.set()
         
         #t.join(1)
 
-    except KeyboardInterrupt:
-        stop_event.set()
-        #t.join()
+    # except KeyboardInterrupt:
+    #     stop_event.set()
+    #     #t.join()
 
-        # save current tokens
-        state = oauth2.get_state()
-        config['DEFAULT'] = state
-        with open('example.ini', 'w') as configfile:
-            config.write(configfile)
-       
-        print("cleaned up")
+    #     # save current tokens
+    #     state = oauth2.get_state()
+    #     config['DEFAULT'] = state
+    #     with open('example.ini', 'w') as configfile:
+    #         config.write(configfile)
+            
+    #     print("cleaned up")
 
