@@ -2,6 +2,7 @@
 
 import configparser
 import json
+import requests
 
 from threading import Thread, Event
 from time import sleep
@@ -57,7 +58,7 @@ def start_server(s):
     
     @app.route("/")
     def root():
-        return "Hello World!"
+        return app.send_static_file('index.html')
 
     @app.route("/tracks/<start>/<end>")
     def tracks(start, end):
